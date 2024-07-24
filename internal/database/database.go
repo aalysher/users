@@ -9,6 +9,9 @@ import (
 	"strconv"
 	"time"
 
+	"users/internal/models"
+
+	"github.com/google/uuid"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	_ "github.com/joho/godotenv/autoload"
 )
@@ -22,6 +25,8 @@ type Service interface {
 	// Close terminates the database connection.
 	// It returns an error if the connection cannot be closed.
 	Close() error
+
+	CreateUser(user *models.User) error
 }
 
 type service struct {
@@ -111,4 +116,14 @@ func (s *service) Health() map[string]string {
 func (s *service) Close() error {
 	log.Printf("Disconnected from database: %s", database)
 	return s.db.Close()
+}
+
+func (s *service) CreateUser(user *models.User) error {
+	id := uuid.New()
+	query := `
+            INSERT INTO users (id, first_name, last_name, email, age)
+        VALUES ($1, $2, $3, $4, $5)
+    `
+	err := s.db.QueryRow(query, id, user.FirstName, user.LastName, user.Email, user.Age).Scan(&user.ID)
+	return err
 }
