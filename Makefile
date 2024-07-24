@@ -57,4 +57,21 @@ watch:
 	    fi; \
 	fi
 
-.PHONY: all build run test clean
+# Load environment variables
+ifneq (,$(wildcard ./.env))
+    include .env
+    export
+endif
+
+# Database connection string
+DB_CONNECTION=postgres://$(DB_USERNAME):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_DATABASE)?sslmode=disable
+
+# Migrate up
+migrate-up:
+	@migrate -path migrations -database "$(DB_CONNECTION)" up
+
+# Migrate down
+migrate-down:
+	@migrate -path migrations -database "$(DB_CONNECTION)" down
+
+.PHONY: all build run test clean migrate-up migrate-down
