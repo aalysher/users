@@ -1,13 +1,14 @@
 package server
 
 import (
+	"database/sql"
 	"encoding/json"
+	"github.com/go-chi/chi/v5"
 	"log"
 	"net/http"
 
 	"users/internal/models"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
 
@@ -21,8 +22,8 @@ func (s *Server) RegisterRoutes() http.Handler {
 
 	r.Post("/users", s.createUserHandler)
 
-	// r.Get("/users", s.getUsersHandler)
-
+	r.Get("/user/{id}", s.getUserByID)
+	r.Patch("/user/{id}", s.updateUserHandler)
 	return r
 }
 
@@ -57,4 +58,43 @@ func (s *Server) createUserHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(user)
+}
+
+func (s *Server) getUserByID(w http.ResponseWriter, r *http.Request) {
+	user, err := s.db.GetUserByID(chi.URLParam(r, "id"))
+	if err != nil {
+		if err == sql.ErrNoRows {
+			http.Error(w, "User not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	// Respond with the user's details
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(user)
+}
+
+func (s *Server) updateUserHandler(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	var updates models.UserUpdate
+
+	if err := json.NewDecoder(r.Body).Decode(&updates); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	updatedUser, err := s.db.UpdateUserByID(id, updates)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			http.Error(w, "User not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(updatedUser)
 }

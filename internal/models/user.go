@@ -10,3 +10,10 @@ type User struct {
 	Email     string    `json:"email"`
 	Created   time.Time `json:"created"`
 }
+
+type UserUpdate struct {
+	FirstName *string `json:"first_name,omitempty"`
+	LastName  *string `json:"last_name,omitempty"`
+	Age       *uint   `json:"age,omitempty"`
+	Email     *string `json:"email,omitempty"`
+}

@@ -27,6 +27,8 @@ type Service interface {
 	Close() error
 
 	CreateUser(user *models.User) error
+	GetUserByID(id string) (*models.User, error)
+	UpdateUserByID(id string, updates models.UserUpdate) (*models.User, error)
 }
 
 type service struct {
@@ -126,4 +128,53 @@ func (s *service) CreateUser(user *models.User) error {
     `
 	err := s.db.QueryRow(query, id, user.FirstName, user.LastName, user.Email, user.Age).Scan(&user.ID)
 	return err
+}
+
+func (s *service) GetUserByID(id string) (*models.User, error) {
+	var user models.User
+	query := `SELECT id, first_name, last_name, email, age FROM users WHERE id = $1`
+	err := s.db.QueryRow(query, id).Scan(&user.ID, &user.FirstName, &user.LastName, &user.Email, &user.Age)
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
+func (s *service) UpdateUserByID(id string, updates models.UserUpdate) (*models.User, error) {
+	query := "UPDATE users SET "
+	params := []interface{}{}
+	paramId := 1
+
+	if updates.FirstName != nil {
+		query += fmt.Sprintf("first_name = $%d, ", paramId)
+		params = append(params, *updates.FirstName)
+		paramId++
+	}
+	if updates.LastName != nil {
+		query += fmt.Sprintf("last_name = $%d, ", paramId)
+		params = append(params, *updates.LastName)
+		paramId++
+	}
+	if updates.Age != nil {
+		query += fmt.Sprintf("age = $%d, ", paramId)
+		params = append(params, *updates.Age)
+		paramId++
+	}
+	if updates.Email != nil {
+		query += fmt.Sprintf("email = $%d, ", paramId)
+		params = append(params, *updates.Email)
+		paramId++
+	}
+
+	// Remove the last comma and add the WHERE clause
+	query = query[:len(query)-2] + fmt.Sprintf(" WHERE id = $%d RETURNING id, first_name, last_name, email, age", paramId)
+	params = append(params, id)
+
+	var user models.User
+	err := s.db.QueryRow(query, params...).Scan(&user.ID, &user.FirstName, &user.LastName, &user.Email, &user.Age)
+	if err != nil {
+		return nil, err
+	}
+
+	return &user, nil
 }
