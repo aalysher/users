@@ -123,11 +123,17 @@ func (s *service) Close() error {
 func (s *service) CreateUser(user *models.User) error {
 	id := uuid.New()
 	query := `
-            INSERT INTO users (id, first_name, last_name, email, age)
+        INSERT INTO users (id, first_name, last_name, email, age)
         VALUES ($1, $2, $3, $4, $5)
     `
-	err := s.db.QueryRow(query, id, user.FirstName, user.LastName, user.Email, user.Age).Scan(&user.ID)
-	return err
+	log.Printf("Executing query: %s with values: %s, %s, %s, %s, %d", query, id, user.FirstName, user.LastName, user.Email, user.Age)
+	_, err := s.db.Exec(query, id, user.FirstName, user.LastName, user.Email, user.Age)
+	if err != nil {
+		log.Printf("Error executing query: %v", err)
+		return err
+	}
+	//user.ID = id.String() // Устанавливаем ID в объекте user
+	return nil
 }
 
 func (s *service) GetUserByID(id string) (*models.User, error) {

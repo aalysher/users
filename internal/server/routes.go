@@ -3,11 +3,13 @@ package server
 import (
 	"database/sql"
 	"encoding/json"
-	"github.com/go-chi/chi/v5"
 	"log"
 	"net/http"
 
+	"github.com/go-chi/chi/v5"
+
 	"users/internal/models"
+	"users/internal/validator"
 
 	"github.com/go-chi/chi/v5/middleware"
 )
@@ -51,6 +53,11 @@ func (s *Server) createUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if err := validator.ValidateUser(&user); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
 	if err := s.db.CreateUser(&user); err != nil {
 		http.Error(w, "Failed to create user", http.StatusInternalServerError)
 		return
@@ -81,6 +88,11 @@ func (s *Server) updateUserHandler(w http.ResponseWriter, r *http.Request) {
 	var updates models.UserUpdate
 
 	if err := json.NewDecoder(r.Body).Decode(&updates); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if err := validator.ValidateUserUpdate(&updates); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
